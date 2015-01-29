@@ -28,6 +28,9 @@ class sfnt {
 			die("Cannot open file $fontfile");
 		}
 
+		$this->TableDirectory = array();
+		$this->Tables = array();
+
 		// Reading the Offset Table
 		fseek($this->fh, 0);
 		$sfntVersion = $this->read_Fixed();
@@ -39,6 +42,7 @@ class sfnt {
 
 			// Reading the Table Directory
 			$this->TableDirectory[0] = array();
+			$this->Tables[0] = array();
 			for($i = 0; $i < $numTables; $i++) {
 				$this->TableDirectory[0][$this->read_Tag()] = array('checkSum' => $this->read_ULONG(), 'offset' => $this->read_ULONG(), 'length' => $this->read_ULONG());
 			}
@@ -47,7 +51,9 @@ class sfnt {
 			$ttcVersion = $this->read_Fixed();
 			$numFonts = $this->read_ULONG();
 			for($i = 0; $i < $numFonts; $i++) {
-				$OffsetTable[] = $this->read_ULONG();
+				$OffsetTable[$i] = $this->read_ULONG();
+				$this->TableDirectory[$i] = array();
+				$this->Tables[$i] = array();
 			}
 			if($ttcVersion == '2.0') {
 				$ulDsigTag = $this->read_ULONG();
@@ -314,40 +320,43 @@ class sfnt {
 
 	function table($tag, $ttc_font = 0) {
 		if(!isset($this->TableDirectory[$ttc_font][$tag]) || $this->TableDirectory[$ttc_font][$tag]['length'] == 0) return false;
-		switch(trim($tag)) {
-			case 'name':
-				return $this->table_name($ttc_font);
-			case 'cmap':
-				return $this->table_cmap($ttc_font);
-			case 'GSUB':
-				return $this->table_gposgsub($tag, $ttc_font);
-			case 'GPOS':
-				return $this->table_gposgsub($tag, $ttc_font);
-			case 'GDEF':
-				return $this->table_gdef($ttc_font);
-			case 'head':
-				return $this->table_head($ttc_font);
-			case 'maxp':
-				return $this->table_maxp($ttc_font);
-			case 'post':
-				return $this->table_post($ttc_font);
-			case 'OS/2':
-				return $this->table_os2($ttc_font);
-			case 'kern':
-				return $this->table_kern($ttc_font);
-			case 'feat':
-				return $this->table_feat($ttc_font);
-			case 'mort':
-				return $this->table_mort($ttc_font);
-			case 'morx':
-				return $this->table_morx($ttc_font);
-			case 'hhea':
-				return $this->table_hhea($ttc_font);	
-			case 'hmtx':
-				return $this->table_hmtx($ttc_font);				
-			default:
-				return 'TODO';
+		if(!array_key_exists($tag, $this->Tables[$ttc_font])) {
+			if(trim($tag) == 'name') {
+				$this->Tables[$ttc_font][$tag] = $this->table_name($ttc_font);
+			} elseif(trim($tag) == 'cmap') {
+				$this->Tables[$ttc_font][$tag] = $this->table_cmap($ttc_font);
+			} elseif(trim($tag) == 'GSUB') {
+				$this->Tables[$ttc_font][$tag] = $this->table_gposgsub($tag, $ttc_font);
+			} elseif(trim($tag) == 'GPOS') {
+				$this->Tables[$ttc_font][$tag] = $this->table_gposgsub($tag, $ttc_font);
+			} elseif(trim($tag) == 'GDEF') {
+				$this->Tables[$ttc_font][$tag] = $this->table_gdef($ttc_font);
+			} elseif(trim($tag) == 'head') {
+				$this->Tables[$ttc_font][$tag] = $this->table_head($ttc_font);
+			} elseif(trim($tag) == 'maxp') {
+				$this->Tables[$ttc_font][$tag] = $this->table_maxp($ttc_font);
+			} elseif(trim($tag) == 'post') {
+				$this->Tables[$ttc_font][$tag] = $this->table_post($ttc_font);
+			} elseif(trim($tag) == 'OS/2') {
+				$this->Tables[$ttc_font][$tag] = $this->table_os2($ttc_font);
+			} elseif(trim($tag) == 'kern') {
+				$this->Tables[$ttc_font][$tag] = $this->table_kern($ttc_font);
+			} elseif(trim($tag) == 'feat') {
+				$this->Tables[$ttc_font][$tag] = $this->table_feat($ttc_font);
+			} elseif(trim($tag) == 'mort') {
+				$this->Tables[$ttc_font][$tag] = $this->table_mort($ttc_font);
+			} elseif(trim($tag) == 'morx') {
+				$this->Tables[$ttc_font][$tag] = $this->table_morx($ttc_font);
+			} elseif(trim($tag) == 'hhea') {
+				$this->Tables[$ttc_font][$tag] = $this->table_hhea($ttc_font);
+			} elseif(trim($tag) == 'hmtx') {
+				$this->Tables[$ttc_font][$tag] = $this->table_hmtx($ttc_font);
+			} else {
+				$this->Tables[$ttc_font][$tag] = 'TODO';
+			}
 		}
+		return $this->Tables[$ttc_font][$tag];
+
 	}
 
 	function table_name($ttc_font = 0) {
@@ -1365,10 +1374,10 @@ class sfnt {
 	
 	function table_hmtx($ttc_font = 0) {
 		# todo: add somekind of cache for recurring (private) variables like numGlyphs
-		$_post = $this->table_post($ttc_font);	
-		$_maxp = $this->table_maxp($ttc_font);						
+		$_post = $this->table('post', $ttc_font);	
+		$_maxp = $this->table('maxp', $ttc_font);						
 		$_numGlyphs = $_maxp['numGlyphs'];
-		$_hhea = $this->table_hhea($ttc_font);						
+		$_hhea = $this->table('hhea', $ttc_font);						
 		$_numberOfHMetrics = $_hhea['numberOfHMetrics'];
 		fseek($this->fh, $this->TableDirectory[$ttc_font]['hmtx']['offset']);
 		$hmtx = array();
