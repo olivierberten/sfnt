@@ -341,6 +341,8 @@ class sfnt {
 				return $this->table_mort($ttc_font);
 			case 'morx':
 				return $this->table_morx($ttc_font);
+			case 'hhea':
+				return $this->table_hhea($ttc_font);	
 			default:
 				return 'TODO';
 		}
@@ -1335,6 +1337,29 @@ class sfnt {
 			}
 			return $features;
 		}
+	}
+	
+	function table_hhea($ttc_font = 0) {
+		fseek($this->fh, $this->TableDirectory[$ttc_font]['hhea']['offset']);		
+		$hhea['version'] = $this->read_Fixed();
+		$hhea['ascender'] = $this->read_SHORT(); // distance baseline of highest ascender
+		$hhea['descender'] = $this->read_SHORT(); // distance baseline of lowest descender
+		$hhea['lineGap'] = $this->read_SHORT();
+		$hhea['advanceWidthMax'] = $this->read_USHORT();
+		$hhea['minLeftSideBearing'] = $this->read_SHORT();
+		$hhea['minRightSideBearing'] = $this->read_SHORT();
+		$hhea['xMaxExtent'] = $this->read_SHORT();
+		$hhea['caretSlopeRise'] = $this->read_SHORT();
+		$hhea['caretSlopeRun'] = $this->read_SHORT(); // 0 for vertical
+		$hhea['caretOffset'] = $this->read_SHORT(); // 0 for non-slanted		
+		$hhea['reserved0'] = $this->read_SHORT();
+		$hhea['reserved1'] = $this->read_SHORT();
+		$hhea['reserved2'] = $this->read_SHORT();
+		$hhea['reserved3'] = $this->read_SHORT();
+		$hhea['metricDataFormat'] = $this->read_SHORT();
+		$hhea['numberOfHMetrics'] = $this->read_USHORT(); // no of hMetric entries in hmtx table
+		return $hhea;
+
 	}
 
 /*******************************************************************************
