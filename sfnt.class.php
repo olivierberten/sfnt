@@ -343,6 +343,8 @@ class sfnt {
 				return $this->table_morx($ttc_font);
 			case 'hhea':
 				return $this->table_hhea($ttc_font);	
+			case 'hmtx':
+				return $this->table_hmtx($ttc_font);				
 			default:
 				return 'TODO';
 		}
@@ -1359,8 +1361,25 @@ class sfnt {
 		$hhea['metricDataFormat'] = $this->read_SHORT();
 		$hhea['numberOfHMetrics'] = $this->read_USHORT(); // no of hMetric entries in hmtx table
 		return $hhea;
-
 	}
+	
+	function table_hmtx($ttc_font = 0) {
+		# todo: add somekind of cache for recurring (private) variables like numGlyphs
+		$_post = $this->table_post($ttc_font);	
+		$_maxp = $this->table_maxp($ttc_font);						
+		$_numGlyphs = $_maxp['numGlyphs'];
+		$_hhea = $this->table_hhea($ttc_font);						
+		$_numberOfHMetrics = $_hhea['numberOfHMetrics'];
+		fseek($this->fh, $this->TableDirectory[$ttc_font]['hmtx']['offset']);
+		$hmtx = array();
+		for($i=0; $i<$_numberOfHMetrics; $i++) {
+			$hmtx[$i]['name'] = $_post['names'][$i];
+			$hmtx[$i]['advanceWidth'] = $this->read_USHORT();
+			$hmtx[$i]['leftSideBearing'] = $this->read_SHORT();	
+		}
+		return $hmtx;
+	}
+		
 
 /*******************************************************************************
  *******************************************************************************
